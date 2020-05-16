@@ -78,12 +78,9 @@ function Flute:new()
     new.valve3.length = 36.028
     new.filter = 0
     new.filter2 = 0
-    
+
     new.sv = 0
     new.sx = 0
-
-    new.pv = 0
-    new.px = 0
 
     new.v1 = 0
     new.v2 = 0
@@ -106,7 +103,6 @@ function Flute:noteOn(note)
     self:setValvePattern()
 
     if self.keyOn == false then
-        print("jump")
         --set valves instantly
         self.v1_ = self.v1
         self.v2_ = self.v2
@@ -188,8 +184,6 @@ function Flute:update()
     local dt = 1/44100
     self.t = self.t + dt
 
-    self.px,self.pv = self.sx,self.sv
-
     local l,r = self.wave:peek()
     l,r = -l,-r
 
@@ -204,30 +198,25 @@ function Flute:update()
         b = math.min(b,1.0)
     end
 
-    self.f = b
-
     --vibrato
     b = b*(1.0 + self.env3*0.1*math.sin(self.t*25 + 0.3*math.sin(self.t*17)))
 
     b = b * self.env
     local g = 3500
 
+    local rand = love.math.randomNormal(0.1)
+    self.sv = self.sv + (g*g*a + g*g*b*x + g*g*x*x - g*x*y - g*g*x*x*x - g*x*x*y)*dt + rand + 220*l
+    self.sx = self.sx + self.sv*dt
 
-    for i = 1,1 do
-        self.sv = self.sv + (g*g*a + g*g*b*x + g*g*x*x - g*x*y - g*g*x*x*x - g*x*x*y)*dt + love.math.randomNormal(0.1) + 220*l
-        self.sx = self.sx + self.sv*dt
-    end
-
-    l = self.sx*0.5 + l * self.env2*0.6
+    l = self.sx*0.5 + l*self.env2*0.6
 
     a = 1.0
     self.filter = self.filter*(1-a) + l*a
     a = 0.1 - 0.09*self.env2
     self.filter2 = self.filter2*(1-a) + self.filter*a
-    l = (self.filter - self.filter2)
+    l = self.filter - self.filter2
 
     local spd = 0.002
-
     self.v1_ = self.v1_*(1.0-spd) + self.v1*spd
     self.v2_ = self.v2_*(1.0-spd) + self.v2*spd
     self.v3_ = self.v3_*(1.0-spd) + self.v3*spd
@@ -236,17 +225,13 @@ function Flute:update()
     local l2,r2 = self.valve2:peek()
     local l3,r3 = self.valve3:peek()
 
-    local o1 = self.v1_
-    local o2 = self.v2_
-    local o3 = self.v3_
-
     local a = r
-    local b = a*(1.0-o1) + r1*o1
-    local c = b*(1.0-o2) + r2*o2
+    local b = a*(1.0-self.v1_) + r1*self.v1_
+    local c = b*(1.0-self.v2_) + r2*self.v2_
 
-    local d =  r2*(1.0-o3) + l3*o3
-    local e = (r1*(1.0-o3) + l3*o3)*(1.0-o2) + l2*o2
-    local f = ((r*(1.0-o3) + l3*o3)*(1.0-o2) + l2*o2)*(1.0-o1) + l1*o1
+    local d =  r2*(1.0-self.v3_) + l3*self.v3_
+    local e = (r1*(1.0-self.v3_) + l3*self.v3_)*(1.0-self.v2_) + l2*self.v2_
+    local f = ((r*(1.0-self.v3_) + l3*self.v3_)*(1.0-self.v2_) + l2*self.v2_)*(1.0-self.v1_) + l1*self.v1_
 
     self.valve1:put(e, a)
     self.valve2:put(d, b)
